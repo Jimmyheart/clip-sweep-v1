@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information and subscription status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique Firebase Auth ID." },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "plan": { "type": "string", "enum": ["starter", "pro", "agency"], "description": "Current subscription plan." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "plan"]
+    },
+    "Clip": {
+      "title": "Video Clip",
+      "description": "A generated video clip from a source video.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string", "description": "Owner of the clip." },
+        "title": { "type": "string" },
+        "sourceUrl": { "type": "string", "format": "uri" },
+        "clipUrl": { "type": "string", "format": "uri" },
+        "thumbnailUrl": { "type": "string", "format": "uri" },
+        "duration": { "type": "number" },
+        "status": { "type": "string", "enum": ["processing", "completed", "failed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "status", "createdAt"]
+    },
+    "CalendarEvent": {
+      "title": "Scheduled Post",
+      "description": "A scheduled social media post for a clip.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "clipId": { "type": "string" },
+        "platform": { "type": "string", "enum": ["tiktok", "instagram", "youtube"] },
+        "scheduledAt": { "type": "string", "format": "date-time" },
+        "caption": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "posted", "failed"] }
+      },
+      "required": ["userId", "clipId", "platform", "scheduledAt", "status"]
+    },
+    "Account": {
+      "title": "Social Media Account",
+      "description": "Connected social media account for auto-posting.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "platform": { "type": "string", "enum": ["tiktok", "instagram", "youtube"] },
+        "username": { "type": "string" },
+        "status": { "type": "string", "enum": ["connected", "disconnected"] },
+        "avatarUrl": { "type": "string", "format": "uri" }
+      },
+      "required": ["userId", "platform", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data."
+    },
+    "/clips/{clipId}": {
+      "schema": "Clip",
+      "description": "User video clips."
+    },
+    "/calendarEvents/{eventId}": {
+      "schema": "CalendarEvent",
+      "description": "Scheduled social media posts."
+    },
+    "/accounts/{accountId}": {
+      "schema": "Account",
+      "description": "Connected social media accounts."
+    }
+  }
+}

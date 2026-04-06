@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - email: string (required) - User email
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - plan: string (required) - 'starter', 'pro', 'agency'
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: clips
+    // Document ID: {clipId} (Auto-generated)
+    // Fields:
+    //   - userId: string (required) - Owner UID
+    //   - title: string (required)
+    //   - sourceUrl: string (required)
+    //   - clipUrl: string (optional)
+    //   - thumbnailUrl: string (optional)
+    //   - duration: number (optional)
+    //   - status: string (required) - 'processing', 'completed', 'failed'
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: calendarEvents
+    // Document ID: {eventId} (Auto-generated)
+    // Fields:
+    //   - userId: string (required) - Owner UID
+    //   - clipId: string (required)
+    //   - platform: string (required) - 'tiktok', 'instagram', 'youtube'
+    //   - scheduledAt: timestamp (required)
+    //   - caption: string (optional)
+    //   - status: string (required) - 'scheduled', 'posted', 'failed'
+    //
+    // ===============================================================
+
+    // Collection: accounts
+    // Document ID: {accountId} (Auto-generated)
+    // Fields:
+    //   - userId: string (required) - Owner UID
+    //   - platform: string (required) - 'tiktok', 'instagram', 'youtube'
+    //   - username: string (optional)
+    //   - status: string (required) - 'connected', 'disconnected'
+    //   - avatarUrl: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isUserDocOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.plan == 'admin' || 
+         (request.auth.token.email == "JimmyHeart256@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'plan', 'createdAt']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && data.email.size() < 256 &&
+             data.plan in ['starter', 'pro', 'agency'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidClip(data) {
+      return data.keys().hasAll(['userId', 'title', 'status', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.status in ['processing', 'completed', 'failed'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['userId', 'clipId', 'platform', 'scheduledAt', 'status']) &&
+             data.userId == request.auth.uid &&
+             data.clipId is string &&
+             data.platform in ['tiktok', 'instagram', 'youtube'] &&
+             data.scheduledAt is timestamp &&
+             data.status in ['scheduled', 'posted', 'failed'];
+    }
+
+    function isValidAccount(data) {
+      return data.keys().hasAll(['userId', 'platform', 'status']) &&
+             data.userId == request.auth.uid &&
+             data.platform in ['tiktok', 'instagram', 'youtube'] &&
+             data.status in ['connected', 'disconnected'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin()) && 
+                    request.resource.data.plan == resource.data.plan; // Plan changes handled via admin or separate logic
+    }
+
+    match /clips/{clipId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidClip(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && isValidClip(request.resource.data) &&
+                    request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && isDocOwner();
+    }
+
+    match /calendarEvents/{eventId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidEvent(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && isValidEvent(request.resource.data) &&
+                    request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && isDocOwner();
+    }
+
+    match /accounts/{accountId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidAccount(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && isValidAccount(request.resource.data) &&
+                    request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && isDocOwner();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
