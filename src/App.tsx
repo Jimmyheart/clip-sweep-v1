@@ -816,19 +816,94 @@ export default function App() {
       popup.document.write(`
         <html>
           <head>
-            <title>Connecting to ${platform}</title>
+            <title>Connect to ${platform}</title>
             <style>
-              body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #020617; color: white; margin: 0; }
-              .loader { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #00f2fe; border-radius: 50%; width: 40px; height: 40px; animate: spin 1s linear infinite; margin-bottom: 20px; }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #020617; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+              .card { background: #0a192f; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+              .logo { width: 48px; height: 48px; margin-bottom: 24px; border-radius: 12px; }
+              h1 { font-size: 24px; margin: 0 0 8px 0; text-align: center; }
+              p { color: #94a3b8; font-size: 14px; margin: 0 0 24px 0; text-align: center; }
+              .input-group { margin-bottom: 16px; width: 100%; }
+              label { display: block; font-size: 12px; font-weight: bold; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+              input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; color: white; box-sizing: border-box; }
+              .btn { width: 100%; background: #00f2fe; color: #020617; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+              .btn:hover { opacity: 0.9; }
+              .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: white; margin-top: 12px; }
+              .hidden { display: none; }
+              .loader { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00f2fe; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto; }
               @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-              .btn { background: #00f2fe; color: #020617; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; }
+              .permissions { text-align: left; background: rgba(255,255,255,0.03); border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+              .permission-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13px; margin-bottom: 12px; }
+              .permission-item:last-child { margin-bottom: 0; }
+              .check { color: #22c55e; font-weight: bold; }
             </style>
           </head>
           <body>
-            <div class="loader"></div>
-            <h2>Connecting to ${platform}...</h2>
-            <p>Please authorize ClipSweep to post on your behalf.</p>
-            <button class="btn" onclick="window.opener.postMessage({ type: 'OAUTH_SUCCESS', platform: '${platform}' }, '*'); window.close();">Authorize ClipSweep</button>
+            <div id="login-screen" class="card">
+              <div style="text-align: center">
+                <img src="https://www.google.com/s2/favicons?domain=${platform.toLowerCase()}.com&sz=64" class="logo" />
+                <h1>Sign in to ${platform}</h1>
+                <p>Use your ${platform} account to continue</p>
+              </div>
+              <div class="input-group">
+                <label>Email or Username</label>
+                <input type="text" placeholder="name@example.com" value="${user.email}" />
+              </div>
+              <div class="input-group">
+                <label>Password</label>
+                <input type="password" value="••••••••" />
+              </div>
+              <button class="btn" onclick="showLoading()">Sign In</button>
+            </div>
+
+            <div id="loading-screen" class="hidden">
+              <div class="loader"></div>
+              <p style="margin-top: 16px; text-align: center">Verifying account...</p>
+            </div>
+
+            <div id="authorize-screen" class="card hidden">
+              <div style="text-align: center">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 24px;">
+                   <img src="https://www.google.com/s2/favicons?domain=${platform.toLowerCase()}.com&sz=64" style="width: 40px; height: 40px; border-radius: 8px" />
+                   <span style="font-size: 24px">↔</span>
+                   <div style="width: 40px; height: 40px; background: #00f2fe; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #020617; font-weight: bold">CS</div>
+                </div>
+                <h1>Authorize ClipSweep</h1>
+                <p>ClipSweep is requesting access to your ${platform} account</p>
+              </div>
+              <div class="permissions">
+                <div class="permission-item">
+                  <span class="check">✓</span>
+                  <span>View your profile information and avatar</span>
+                </div>
+                <div class="permission-item">
+                  <span class="check">✓</span>
+                  <span>Post videos and captions on your behalf</span>
+                </div>
+                <div class="permission-item">
+                  <span class="check">✓</span>
+                  <span>Manage your content schedule</span>
+                </div>
+              </div>
+              <button class="btn" onclick="authorize()">Authorize</button>
+              <button class="btn btn-secondary" onclick="window.close()">Cancel</button>
+            </div>
+
+            <script>
+              function showLoading() {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('loading-screen').classList.remove('hidden');
+                setTimeout(() => {
+                  document.getElementById('loading-screen').classList.add('hidden');
+                  document.getElementById('authorize-screen').classList.remove('hidden');
+                }, 1500);
+              }
+
+              function authorize() {
+                window.opener.postMessage({ type: 'OAUTH_SUCCESS', platform: '${platform}' }, '*');
+                window.close();
+              }
+            </script>
           </body>
         </html>
       `);
