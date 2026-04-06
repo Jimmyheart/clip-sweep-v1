@@ -1,0 +1,8 @@
+{
+  "name": "ClipSweep",
+  "description": "AI-powered short video clipping app that turns YouTube videos into viral 9:16 shorts for TikTok, Reels, and YouTube Shorts.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
