@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LandingPage from './LandingPage';
 import { 
   Youtube, 
   Scissors, 
@@ -783,7 +784,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginView onLogin={login} />;
+    return <LandingPage onLogin={login} />;
   }
 
   const handleUpdatePostDate = async (postId: string, newDate: string) => {
